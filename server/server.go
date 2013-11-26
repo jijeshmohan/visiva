@@ -2,19 +2,78 @@ package server
 
 import (
 	"fmt"
-	"html"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"text/template"
+)
+
+var (
+	homeTemplate = template.Must(template.ParseFiles("layouts/index.html"))
 )
 
 func StartServer(port int) {
 	log.Println("Starting server on port :", port)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-	})
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
+	http.HandleFunc("/", handleHomePage)
+	http.HandleFunc("/dashboard/", handleDashboard)
+
 	addr := fmt.Sprintf(":%d", port)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal("Failed to run server: ", err)
 	}
+}
+
+func handleHomePage(c http.ResponseWriter, req *http.Request) {
+	files := getAllFiles("./dashboards")
+	data := make(map[string]interface{})
+	data["host"] = req.Host
+	data["dashboards"] = files
+	homeTemplate.Execute(c, data)
+}
+
+func handleDashboard(c http.ResponseWriter, r *http.Request) {
+	dashboard := r.URL.Path[len("/dashboard/"):]
+	file, err := template.ParseFiles("./dashboards/" + dashboard + ".html")
+	if err != nil {
+		http.Error(c, "Dashboard not found", 404)
+		return
+	}
+	dashTemplate := template.Must(file, err)
+	data := make(map[string]interface{})
+	data["host"] = r.Host
+	dashTemplate.Execute(c, data)
+
+}
+
+func getAllFiles(path string) []string {
+	dir, err := os.Open(path)
+	checkErr(err)
+	defer dir.Close()
+	fi, err := dir.Stat()
+	checkErr(err)
+
+	filenames := make([]string, 0)
+	if fi.IsDir() {
+		fis, err := dir.Readdir(-1) // -1 means return all the FileInfos
+		checkErr(err)
+		for _, fileinfo := range fis {
+			if !fileinfo.IsDir() {
+				filenames = append(filenames, removeExtension(fileinfo.Name()))
+			}
+		}
+	}
+	return filenames
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+func removeExtension(filename string) string {
+	var extension = filepath.Ext(filename)
+	return filename[0 : len(filename)-len(extension)]
 }

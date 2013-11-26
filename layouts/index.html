@@ -1,0 +1,12 @@
+<html>
+<head>
+	<title>Dashboard</title>
+</head>
+<body>
+	<ul>
+		{{range .dashboards}}
+		<li><a href="/dashboard/{{.}}">{{.}}</a></li>
+		{{end}}
+	</ul>		
+</body>
+</html>
