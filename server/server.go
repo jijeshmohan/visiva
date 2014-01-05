@@ -35,16 +35,24 @@ func handleHomePage(c http.ResponseWriter, req *http.Request) {
 }
 
 func handleDashboard(c http.ResponseWriter, r *http.Request) {
+
 	dashboard := r.URL.Path[len("/dashboard/"):]
-	file, err := template.ParseFiles("./dashboards/" + dashboard + ".html")
+	_, err := template.ParseFiles("./dashboards/" + dashboard + ".html")
 	if err != nil {
+		fmt.Println(err)
 		http.Error(c, "Dashboard not found", 404)
 		return
 	}
-	dashTemplate := template.Must(file, err)
+
+	dashTemplate := template.New(dashboard)
+
+	dashTemplate.ParseFiles("./dashboards/" + dashboard + ".html")
+
+	pattern := filepath.Join("./widgets/", "*.widget")
+	dashTemplate.ParseGlob(pattern)
 	data := make(map[string]interface{})
 	data["host"] = r.Host
-	dashTemplate.Execute(c, data)
+	dashTemplate.ExecuteTemplate(c, dashboard, data)
 
 }
 
