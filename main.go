@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/jessevdk/go-flags"
-	"github.com/jijeshmohan/visiva/server"
 	"os"
+
+	"./server"
+	"github.com/jessevdk/go-flags"
 )
 
 const (
